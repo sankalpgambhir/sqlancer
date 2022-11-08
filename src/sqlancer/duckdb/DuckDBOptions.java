@@ -17,6 +17,7 @@ import sqlancer.duckdb.DuckDBProvider.DuckDBGlobalState;
 import sqlancer.duckdb.test.DuckDBNoRECOracle;
 import sqlancer.duckdb.test.DuckDBQueryPartitioningAggregateTester;
 import sqlancer.duckdb.test.DuckDBQueryPartitioningDistinctTester;
+import sqlancer.duckdb.test.DuckDBQueryPartitioningGroupByDistinctTester;
 import sqlancer.duckdb.test.DuckDBQueryPartitioningBetweenAndTester;
 import sqlancer.duckdb.test.DuckDBQueryPartitioningBetweenIntersectTester;
 import sqlancer.duckdb.test.DuckDBQueryPartitioningGroupByTester;
@@ -148,6 +149,12 @@ public class DuckDBOptions implements DBMSSpecificOptions<DuckDBOracleFactory> {
                 return new DuckDBQueryPartitioningBetweenIntersectTester(globalState);
             }
         },
+        GROUPBY_DISTINCT {
+            @Override
+            public TestOracle create(DuckDBGlobalState globalState) throws SQLException {
+                return new DuckDBQueryPartitioningGroupByDistinctTester(globalState);
+            }
+        },
         QUERY_PARTITIONING {
             @Override
             public TestOracle create(DuckDBGlobalState globalState) throws SQLException {
@@ -159,6 +166,7 @@ public class DuckDBOptions implements DBMSSpecificOptions<DuckDBOracleFactory> {
                 oracles.add(new DuckDBQueryPartitioningGroupByTester(globalState));
                 oracles.add(new DuckDBQueryPartitioningBetweenAndTester(globalState));
                 oracles.add(new DuckDBQueryPartitioningBetweenIntersectTester(globalState));
+                oracles.add(new DuckDBQueryPartitioningGroupByDistinctTester(globalState));
                 return new CompositeTestOracle(oracles, globalState);
             }
         };
