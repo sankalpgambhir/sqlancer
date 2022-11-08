@@ -17,6 +17,8 @@ import sqlancer.duckdb.DuckDBProvider.DuckDBGlobalState;
 import sqlancer.duckdb.test.DuckDBNoRECOracle;
 import sqlancer.duckdb.test.DuckDBQueryPartitioningAggregateTester;
 import sqlancer.duckdb.test.DuckDBQueryPartitioningDistinctTester;
+import sqlancer.duckdb.test.DuckDBQueryPartitioningBetweenAndTester;
+import sqlancer.duckdb.test.DuckDBQueryPartitioningBetweenIntersectTester;
 import sqlancer.duckdb.test.DuckDBQueryPartitioningGroupByTester;
 import sqlancer.duckdb.test.DuckDBQueryPartitioningHavingTester;
 import sqlancer.duckdb.test.DuckDBQueryPartitioningWhereTester;
@@ -134,6 +136,18 @@ public class DuckDBOptions implements DBMSSpecificOptions<DuckDBOracleFactory> {
                 return new DuckDBQueryPartitioningDistinctTester(globalState);
             }
         },
+        BETWEEN_AND {
+            @Override
+            public TestOracle create(DuckDBGlobalState globalState) throws SQLException {
+                return new DuckDBQueryPartitioningBetweenAndTester(globalState);
+            }
+        },
+        BETWEEN_INTERSECT {
+            @Override
+            public TestOracle create(DuckDBGlobalState globalState) throws SQLException {
+                return new DuckDBQueryPartitioningBetweenIntersectTester(globalState);
+            }
+        },
         QUERY_PARTITIONING {
             @Override
             public TestOracle create(DuckDBGlobalState globalState) throws SQLException {
@@ -143,6 +157,8 @@ public class DuckDBOptions implements DBMSSpecificOptions<DuckDBOracleFactory> {
                 oracles.add(new DuckDBQueryPartitioningAggregateTester(globalState));
                 oracles.add(new DuckDBQueryPartitioningDistinctTester(globalState));
                 oracles.add(new DuckDBQueryPartitioningGroupByTester(globalState));
+                oracles.add(new DuckDBQueryPartitioningBetweenAndTester(globalState));
+                oracles.add(new DuckDBQueryPartitioningBetweenIntersectTester(globalState));
                 return new CompositeTestOracle(oracles, globalState);
             }
         };

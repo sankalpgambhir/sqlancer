@@ -8,6 +8,8 @@ import java.util.stream.Collectors;
 
 import sqlancer.Randomly;
 import sqlancer.common.ast.newast.ColumnReferenceNode;
+import sqlancer.common.ast.newast.NewBetweenOperatorNode;
+import sqlancer.common.ast.newast.NewBinaryOperatorNode;
 import sqlancer.common.ast.newast.Node;
 import sqlancer.common.ast.newast.TableReferenceNode;
 import sqlancer.common.gen.ExpressionGenerator;
@@ -23,6 +25,8 @@ import sqlancer.duckdb.ast.DuckDBExpression;
 import sqlancer.duckdb.ast.DuckDBJoin;
 import sqlancer.duckdb.ast.DuckDBSelect;
 import sqlancer.duckdb.gen.DuckDBExpressionGenerator;
+import sqlancer.duckdb.gen.DuckDBExpressionGenerator.DuckDBBinaryComparisonOperator;
+import sqlancer.duckdb.gen.DuckDBExpressionGenerator.DuckDBBinaryLogicalOperator;
 
 public class DuckDBQueryPartitioningBase
         extends TernaryLogicPartitioningOracleBase<Node<DuckDBExpression>, DuckDBGlobalState> implements TestOracle {
@@ -31,6 +35,9 @@ public class DuckDBQueryPartitioningBase
     DuckDBTables targetTables;
     DuckDBExpressionGenerator gen;
     DuckDBSelect select;
+    Node<DuckDBExpression> splitPredicate;
+    Node<DuckDBExpression> leftPredicate;
+    Node<DuckDBExpression> rightPredicate;
 
     public DuckDBQueryPartitioningBase(DuckDBGlobalState state) {
         super(state);
@@ -77,6 +84,68 @@ public class DuckDBQueryPartitioningBase
     @Override
     protected ExpressionGenerator<Node<DuckDBExpression>> getGen() {
         return gen;
+    }
+
+    public Node<DuckDBExpression> genSplitPredicate(Node<DuckDBExpression> pred){
+        if(pred instanceof NewBetweenOperatorNode){
+            if(Randomly.getBoolean()){
+                // split
+                NewBetweenOperatorNode<DuckDBExpression> betweenPred = (NewBetweenOperatorNode<DuckDBExpression>) pred;
+                
+                return new NewBinaryOperatorNode<DuckDBExpression>(
+                    new NewBinaryOperatorNode<>(
+                        betweenPred.getLeft(), 
+                        betweenPred.getMiddle(),
+                        betweenPred.isTrue() ? DuckDBBinaryComparisonOperator.GREATER_EQUALS : DuckDBBinaryComparisonOperator.SMALLER), 
+                    new NewBinaryOperatorNode<>(
+                        betweenPred.getLeft(), 
+                        betweenPred.getRight(), 
+                        betweenPred.isTrue() ? DuckDBBinaryComparisonOperator.SMALLER_EQUALS : DuckDBBinaryComparisonOperator.GREATER),  
+                    betweenPred.isTrue() ? DuckDBBinaryLogicalOperator.AND : DuckDBBinaryLogicalOperator.OR);
+            }
+            else{
+                // don't split
+                return pred;
+            }
+        }
+        else{
+            return pred;
+        }
+    }
+
+    public Node<DuckDBExpression> genBetweenDiscardedPredicate(Node<DuckDBExpression> pred, Boolean right){
+        if(pred instanceof NewBetweenOperatorNode){
+            if(Randomly.getBoolean()){
+                // split
+                NewBetweenOperatorNode<DuckDBExpression> betweenPred = (NewBetweenOperatorNode<DuckDBExpression>) pred;
+
+                if(betweenPred.isTrue()) {
+                    return new NewBinaryOperatorNode<DuckDBExpression>(
+                    betweenPred.getLeft(),
+                    right ? betweenPred.getRight() : betweenPred.getMiddle(), 
+                    right ? DuckDBBinaryComparisonOperator.SMALLER_EQUALS : DuckDBBinaryComparisonOperator.GREATER_EQUALS);
+                }
+                else{
+                    return pred;
+                }
+            }
+        }
+
+        // recurse
+        if(pred instanceof NewBinaryOperatorNode){
+            if(Randomly.getBoolean()){
+                // split
+                NewBinaryOperatorNode<DuckDBExpression> binaryPred = (NewBinaryOperatorNode<DuckDBExpression>) pred;
+
+                return new NewBinaryOperatorNode<>(
+                    genBetweenDiscardedPredicate(binaryPred.getLeft(), right), 
+                    genBetweenDiscardedPredicate(binaryPred.getRight(), right), 
+                    binaryPred.getOp());
+            }
+        }
+
+        // else
+        return pred;
     }
 
 }

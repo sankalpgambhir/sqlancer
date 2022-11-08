@@ -166,4 +166,16 @@ public final class ComparatorHelper {
         return secondResultSet;
     }
 
+    public static List<String> getIntersectedResultSet(String firstQueryString, String secondQueryString, 
+            List<String> combinedString, SQLGlobalState<?, ?> state,
+            ExpectedErrors errors) throws SQLException {
+        String intersectString;
+        intersectString = firstQueryString + " INTERSECT " + secondQueryString;
+        List<String> secondResultSet;
+        combinedString.add(intersectString);
+        secondResultSet = getResultSetFirstColumnAsString(intersectString, errors, state);
+        return secondResultSet;
+    }
+
+
 }
