@@ -383,6 +383,23 @@ public abstract class SQLite3Expression {
             }
         }
 
+        public SQLite3Expression genSplitBetweenPredicate(){
+            BetweenOperation betweenPred = this;
+
+            return new Sqlite3BinaryOperation(
+                new BinaryComparisonOperation(
+                    betweenPred.getLeft(), 
+                    betweenPred.getExpression(), 
+                    betweenPred.isNegated() ? BinaryComparisonOperation.BinaryComparisonOperator.SMALLER : BinaryComparisonOperation.BinaryComparisonOperator.GREATER_EQUALS
+                    ),
+                new BinaryComparisonOperation(
+                    betweenPred.getLeft(), 
+                    betweenPred.getExpression(), 
+                    betweenPred.isNegated() ? BinaryComparisonOperation.BinaryComparisonOperator.SMALLER : BinaryComparisonOperation.BinaryComparisonOperator.GREATER_EQUALS
+                    ),
+                    betweenPred.isNegated() ? Sqlite3BinaryOperation.BinaryOperator.OR : Sqlite3BinaryOperation.BinaryOperator.AND
+            );
+        }
     }
 
     public static class Function extends SQLite3Expression {
@@ -1548,6 +1565,38 @@ public abstract class SQLite3Expression {
         public boolean omitBracketsWhenPrinting() {
             return true;
         }
+    }
+
+    public SQLite3Expression genDiscardedBetweenPredicate(Boolean left){
+        if (this instanceof BetweenOperation) {
+            BetweenOperation betweenPred = (BetweenOperation) this;
+
+            if (!betweenPred.isNegated() && !Randomly.getBooleanWithSmallProbability()) {
+            // TODO: implement partitioning for nested negated betweens?
+
+            return new BinaryComparisonOperation(
+                    left ? betweenPred.getLeft() : betweenPred.getRight(), 
+                    betweenPred.getExpression(), 
+                    left ? BinaryComparisonOperation.BinaryComparisonOperator.GREATER_EQUALS : BinaryComparisonOperation.BinaryComparisonOperator.SMALLER
+                    );
+            }
+        }
+        else {
+            // recurse
+            if (this instanceof Sqlite3BinaryOperation) {
+                Sqlite3BinaryOperation binOp = (Sqlite3BinaryOperation) this;
+
+                if (binOp.getOperator() == BinaryOperator.OR || binOp.getOperator() == BinaryOperator.AND) {
+                    return new Sqlite3BinaryOperation(
+                        binOp.left.genDiscardedBetweenPredicate(left), 
+                        binOp.right.genDiscardedBetweenPredicate(left), 
+                        binOp.getOperator()
+                    );
+                }
+            }
+        }
+
+        return this;
     }
 
 }

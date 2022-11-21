@@ -17,8 +17,11 @@ import sqlancer.sqlite3.oracle.SQLite3Fuzzer;
 import sqlancer.sqlite3.oracle.SQLite3NoRECOracle;
 import sqlancer.sqlite3.oracle.SQLite3PivotedQuerySynthesisOracle;
 import sqlancer.sqlite3.oracle.tlp.SQLite3TLPAggregateOracle;
+import sqlancer.sqlite3.oracle.tlp.SQLite3TLPBetweenAndOracle;
+import sqlancer.sqlite3.oracle.tlp.SQLite3TLPBetweenIntersectOracle;
 import sqlancer.sqlite3.oracle.tlp.SQLite3TLPDistinctOracle;
 import sqlancer.sqlite3.oracle.tlp.SQLite3TLPGroupByOracle;
+import sqlancer.sqlite3.oracle.tlp.SQLite3TLPGroupByDistinctOracle;
 import sqlancer.sqlite3.oracle.tlp.SQLite3TLPHavingOracle;
 import sqlancer.sqlite3.oracle.tlp.SQLite3TLPWhereOracle;
 
@@ -143,6 +146,24 @@ public class SQLite3Options implements DBMSSpecificOptions<SQLite3OracleFactory>
                 return new SQLite3TLPHavingOracle(globalState);
             }
         },
+        BETWEEN_AND {
+            @Override
+            public TestOracle create(SQLite3GlobalState globalState) throws SQLException {
+                return new SQLite3TLPBetweenAndOracle(globalState);
+            }
+        },
+        BETWEEN_INTERSECT {
+            @Override
+            public TestOracle create(SQLite3GlobalState globalState) throws SQLException {
+                return new SQLite3TLPBetweenIntersectOracle(globalState);
+            }
+        },
+        GROUPBY_DISTINCT {
+            @Override
+            public TestOracle create(SQLite3GlobalState globalState) throws SQLException {
+                return new SQLite3TLPGroupByDistinctOracle(globalState);
+            }
+        },
         FUZZER {
             @Override
             public TestOracle create(SQLite3GlobalState globalState) throws SQLException {
@@ -158,6 +179,9 @@ public class SQLite3Options implements DBMSSpecificOptions<SQLite3OracleFactory>
                 oracles.add(new SQLite3TLPGroupByOracle(globalState));
                 oracles.add(new SQLite3TLPHavingOracle(globalState));
                 oracles.add(new SQLite3TLPAggregateOracle(globalState));
+                oracles.add(new SQLite3TLPBetweenAndOracle(globalState));
+                oracles.add(new SQLite3TLPBetweenIntersectOracle(globalState));
+                oracles.add(new SQLite3TLPGroupByDistinctOracle(globalState));
                 return new CompositeTestOracle(oracles, globalState);
             }
         };
