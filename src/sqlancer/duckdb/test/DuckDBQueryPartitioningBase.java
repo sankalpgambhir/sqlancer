@@ -148,4 +148,43 @@ public class DuckDBQueryPartitioningBase
         return pred;
     }
 
+    public Node<DuckDBExpression> genSplitComparisonPredicate(Node<DuckDBExpression> pred){
+        if(pred instanceof NewBinaryOperatorNode){
+            NewBinaryOperatorNode<DuckDBExpression> binaryPred = (NewBinaryOperatorNode<DuckDBExpression>) pred;
+            
+            if(
+                binaryPred.getOp() != DuckDBBinaryComparisonOperator.GREATER_EQUALS ||
+                binaryPred.getOp() != DuckDBBinaryComparisonOperator.SMALLER_EQUALS
+            ){
+                return new NewBinaryOperatorNode<DuckDBExpression>(
+                genSplitComparisonPredicate(binaryPred.getLeft()),
+                genSplitComparisonPredicate(binaryPred.getRight()), 
+                binaryPred.getOp());
+            }
+            else{
+                // rewrite
+                Node<DuckDBExpression> newLeft = genSplitComparisonPredicate(binaryPred.getLeft());
+                Node<DuckDBExpression> newRight = genSplitComparisonPredicate(binaryPred.getRight());
+
+                // l <= r --> l < r OR l == r
+                // l >= r --> l > r OR l == r
+                return new NewBinaryOperatorNode<DuckDBExpression>(
+                new NewBinaryOperatorNode<>(newLeft, newRight, binaryPred.getOp() == DuckDBBinaryComparisonOperator.GREATER_EQUALS ? DuckDBBinaryComparisonOperator.GREATER : DuckDBBinaryComparisonOperator.SMALLER),
+                new NewBinaryOperatorNode<>(newLeft, newRight, DuckDBBinaryComparisonOperator.EQUALS),
+                DuckDBBinaryLogicalOperator.OR);
+            }
+        }
+        else if(pred instanceof NewBetweenOperatorNode){
+            NewBetweenOperatorNode<DuckDBExpression> betweenPred = (NewBetweenOperatorNode<DuckDBExpression>) pred;
+            return new NewBetweenOperatorNode<DuckDBExpression>(
+            genSplitComparisonPredicate(betweenPred.getLeft()),
+            genSplitComparisonPredicate(betweenPred.getMiddle()), 
+            genSplitComparisonPredicate(betweenPred.getRight()), 
+            betweenPred.isTrue());
+        }
+
+        // else, unimplemented recursion
+        return pred;
+    }
+
 }

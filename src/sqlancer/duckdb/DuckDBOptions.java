@@ -20,6 +20,7 @@ import sqlancer.duckdb.test.DuckDBQueryPartitioningDistinctTester;
 import sqlancer.duckdb.test.DuckDBQueryPartitioningGroupByDistinctTester;
 import sqlancer.duckdb.test.DuckDBQueryPartitioningBetweenAndTester;
 import sqlancer.duckdb.test.DuckDBQueryPartitioningBetweenIntersectTester;
+import sqlancer.duckdb.test.DuckDBQueryPartitioningComparisonTester;
 import sqlancer.duckdb.test.DuckDBQueryPartitioningGroupByTester;
 import sqlancer.duckdb.test.DuckDBQueryPartitioningHavingTester;
 import sqlancer.duckdb.test.DuckDBQueryPartitioningWhereTester;
@@ -159,14 +160,15 @@ public class DuckDBOptions implements DBMSSpecificOptions<DuckDBOracleFactory> {
             @Override
             public TestOracle create(DuckDBGlobalState globalState) throws SQLException {
                 List<TestOracle> oracles = new ArrayList<>();
-                oracles.add(new DuckDBQueryPartitioningWhereTester(globalState));
-                oracles.add(new DuckDBQueryPartitioningHavingTester(globalState));
-                oracles.add(new DuckDBQueryPartitioningAggregateTester(globalState));
-                oracles.add(new DuckDBQueryPartitioningDistinctTester(globalState));
-                oracles.add(new DuckDBQueryPartitioningGroupByTester(globalState));
-                oracles.add(new DuckDBQueryPartitioningBetweenAndTester(globalState));
-                oracles.add(new DuckDBQueryPartitioningBetweenIntersectTester(globalState));
-                oracles.add(new DuckDBQueryPartitioningGroupByDistinctTester(globalState));
+                // oracles.add(new DuckDBQueryPartitioningWhereTester(globalState));
+                // oracles.add(new DuckDBQueryPartitioningHavingTester(globalState));
+                // oracles.add(new DuckDBQueryPartitioningAggregateTester(globalState));
+                // oracles.add(new DuckDBQueryPartitioningDistinctTester(globalState));
+                // oracles.add(new DuckDBQueryPartitioningGroupByTester(globalState));
+                // oracles.add(new DuckDBQueryPartitioningBetweenAndTester(globalState));
+                // oracles.add(new DuckDBQueryPartitioningBetweenIntersectTester(globalState));
+                // oracles.add(new DuckDBQueryPartitioningGroupByDistinctTester(globalState));
+                oracles.add(new DuckDBQueryPartitioningComparisonTester(globalState));
                 return new CompositeTestOracle(oracles, globalState);
             }
         };
