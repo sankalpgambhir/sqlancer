@@ -33,6 +33,7 @@ public class SQLite3TLPBetweenIntersectOracle extends SQLite3TLPBase {
         select.setSelectType(SelectType.DISTINCT);
 
         // original
+        select.setWhereClause(predicate);
         String originalQueryString = SQLite3Visitor.asString(select);
         List<String> resultSet = ComparatorHelper.getResultSetFirstColumnAsString(originalQueryString, errors, state);
 
@@ -47,11 +48,11 @@ public class SQLite3TLPBetweenIntersectOracle extends SQLite3TLPBase {
 
         // modify the predicate if possible
         if (predicate instanceof BetweenOperation) {
-            SQLite3Expression leftPredicate = predicate.genDiscardedBetweenPredicate(false);
+            SQLite3Expression leftPredicate = predicate.genDiscardedBetweenPredicate(true);
             select.setWhereClause(leftPredicate);
             firstQueryString = SQLite3Visitor.asString(select);
             
-            SQLite3Expression rightPredicate = predicate.genDiscardedBetweenPredicate(true);
+            SQLite3Expression rightPredicate = predicate.genDiscardedBetweenPredicate(false);
             select.setWhereClause(rightPredicate);
             secondQueryString = SQLite3Visitor.asString(select);
         }

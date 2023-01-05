@@ -390,10 +390,10 @@ public abstract class SQLite3Expression {
                 new BinaryComparisonOperation(
                     betweenPred.getLeft(), 
                     betweenPred.getExpression(), 
-                    betweenPred.isNegated() ? BinaryComparisonOperation.BinaryComparisonOperator.SMALLER : BinaryComparisonOperation.BinaryComparisonOperator.GREATER_EQUALS
+                    betweenPred.isNegated() ? BinaryComparisonOperation.BinaryComparisonOperator.GREATER : BinaryComparisonOperation.BinaryComparisonOperator.SMALLER_EQUALS
                     ),
                 new BinaryComparisonOperation(
-                    betweenPred.getLeft(), 
+                    betweenPred.getRight(), 
                     betweenPred.getExpression(), 
                     betweenPred.isNegated() ? BinaryComparisonOperation.BinaryComparisonOperator.SMALLER : BinaryComparisonOperation.BinaryComparisonOperator.GREATER_EQUALS
                     ),
@@ -1577,7 +1577,7 @@ public abstract class SQLite3Expression {
             return new BinaryComparisonOperation(
                     left ? betweenPred.getLeft() : betweenPred.getRight(), 
                     betweenPred.getExpression(), 
-                    left ? BinaryComparisonOperation.BinaryComparisonOperator.GREATER_EQUALS : BinaryComparisonOperation.BinaryComparisonOperator.SMALLER
+                    left ? BinaryComparisonOperation.BinaryComparisonOperator.SMALLER_EQUALS : BinaryComparisonOperation.BinaryComparisonOperator.GREATER_EQUALS
                     );
             }
         }
