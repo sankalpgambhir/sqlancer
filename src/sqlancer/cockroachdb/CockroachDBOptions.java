@@ -14,10 +14,15 @@ import sqlancer.cockroachdb.CockroachDBOptions.CockroachDBOracleFactory;
 import sqlancer.cockroachdb.CockroachDBProvider.CockroachDBGlobalState;
 import sqlancer.cockroachdb.oracle.CockroachDBNoRECOracle;
 import sqlancer.cockroachdb.oracle.tlp.CockroachDBTLPAggregateOracle;
+import sqlancer.cockroachdb.oracle.tlp.CockroachDBTLPBetweenAndOracle;
+import sqlancer.cockroachdb.oracle.tlp.CockroachDBTLPBetweenIntersectOracle;
 import sqlancer.cockroachdb.oracle.tlp.CockroachDBTLPDistinctOracle;
 import sqlancer.cockroachdb.oracle.tlp.CockroachDBTLPExtendedWhereOracle;
+import sqlancer.cockroachdb.oracle.tlp.CockroachDBTLPGroupByDistinctOracle;
 import sqlancer.cockroachdb.oracle.tlp.CockroachDBTLPGroupByOracle;
 import sqlancer.cockroachdb.oracle.tlp.CockroachDBTLPHavingOracle;
+import sqlancer.cockroachdb.oracle.tlp.CockroachDBTLPPartitioningComparisonOracle;
+import sqlancer.cockroachdb.oracle.tlp.CockroachDBTLPPartitioningDistinctOracle;
 import sqlancer.cockroachdb.oracle.tlp.CockroachDBTLPWhereOracle;
 import sqlancer.common.oracle.CompositeTestOracle;
 import sqlancer.common.oracle.TestOracle;
@@ -58,6 +63,36 @@ public class CockroachDBOptions implements DBMSSpecificOptions<CockroachDBOracle
                 return new CockroachDBTLPHavingOracle(globalState);
             }
         },
+        BETWEEN_AND {
+            @Override
+            public TestOracle create(CockroachDBGlobalState globalState) throws SQLException {
+                return new CockroachDBTLPBetweenAndOracle(globalState);
+            }
+        },
+        BETWEEN_INTERSECT {
+            @Override
+            public TestOracle create(CockroachDBGlobalState globalState) throws SQLException {
+                return new CockroachDBTLPBetweenIntersectOracle(globalState);
+            }
+        },
+        GROUPBY_DISTINCT {
+            @Override
+            public TestOracle create(CockroachDBGlobalState globalState) throws SQLException {
+                return new CockroachDBTLPGroupByDistinctOracle(globalState);
+            }
+        },
+        PARTITIONING_COMPARISON {
+            @Override
+            public TestOracle create(CockroachDBGlobalState globalState) throws SQLException {
+                return new CockroachDBTLPPartitioningComparisonOracle(globalState);
+            }
+        },
+        PARTITIONING_DISTINCT {
+            @Override
+            public TestOracle create(CockroachDBGlobalState globalState) throws SQLException {
+                return new CockroachDBTLPPartitioningDistinctOracle(globalState);
+            }
+        },
         WHERE {
             @Override
             public TestOracle create(CockroachDBGlobalState globalState) throws SQLException {
@@ -86,6 +121,11 @@ public class CockroachDBOptions implements DBMSSpecificOptions<CockroachDBOracle
                 oracles.add(new CockroachDBTLPGroupByOracle(globalState));
                 oracles.add(new CockroachDBTLPExtendedWhereOracle(globalState));
                 oracles.add(new CockroachDBTLPDistinctOracle(globalState));
+                oracles.add(new CockroachDBTLPBetweenAndOracle(globalState));
+                oracles.add(new CockroachDBTLPBetweenIntersectOracle(globalState));
+                // oracles.add(new CockroachDBTLPGroupByDistinctOracle(globalState));
+                oracles.add(new CockroachDBTLPPartitioningComparisonOracle(globalState));
+                oracles.add(new CockroachDBTLPPartitioningDistinctOracle(globalState));
                 return new CompositeTestOracle(oracles, globalState);
             }
         };
