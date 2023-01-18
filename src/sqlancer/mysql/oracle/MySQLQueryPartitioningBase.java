@@ -25,8 +25,8 @@ import sqlancer.mysql.ast.MySQLBinaryComparisonOperation.BinaryComparisonOperato
 import sqlancer.mysql.ast.MySQLBinaryLogicalOperation.MySQLBinaryLogicalOperator;
 import sqlancer.mysql.gen.MySQLExpressionGenerator;
 
-public abstract class MySQLQueryPartitioningBase
-        extends TernaryLogicPartitioningOracleBase<MySQLExpression, MySQLGlobalState> implements TestOracle {
+public abstract class MySQLQueryPartitioningBase extends
+        TernaryLogicPartitioningOracleBase<MySQLExpression, MySQLGlobalState> implements TestOracle<MySQLGlobalState> {
 
     MySQLSchema s;
     MySQLTables targetTables;
