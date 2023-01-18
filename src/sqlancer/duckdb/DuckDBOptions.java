@@ -140,19 +140,19 @@ public class DuckDBOptions implements DBMSSpecificOptions<DuckDBOracleFactory> {
         },
         BETWEEN_AND {
             @Override
-            public TestOracle create(DuckDBGlobalState globalState) throws SQLException {
+            public TestOracle<DuckDBGlobalState> create(DuckDBGlobalState globalState) throws SQLException {
                 return new DuckDBQueryPartitioningBetweenAndTester(globalState);
             }
         },
         BETWEEN_INTERSECT {
             @Override
-            public TestOracle create(DuckDBGlobalState globalState) throws SQLException {
+            public TestOracle<DuckDBGlobalState> create(DuckDBGlobalState globalState) throws SQLException {
                 return new DuckDBQueryPartitioningBetweenIntersectTester(globalState);
             }
         },
         GROUPBY_DISTINCT {
             @Override
-            public TestOracle create(DuckDBGlobalState globalState) throws SQLException {
+            public TestOracle<DuckDBGlobalState> create(DuckDBGlobalState globalState) throws SQLException {
                 return new DuckDBQueryPartitioningGroupByDistinctTester(globalState);
             }
         },

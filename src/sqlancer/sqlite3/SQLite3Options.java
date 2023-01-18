@@ -155,19 +155,19 @@ public class SQLite3Options implements DBMSSpecificOptions<SQLite3OracleFactory>
         },
         BETWEEN_AND {
             @Override
-            public TestOracle create(SQLite3GlobalState globalState) throws SQLException {
+            public TestOracle<SQLite3GlobalState> create(SQLite3GlobalState globalState) throws SQLException {
                 return new SQLite3TLPBetweenAndOracle(globalState);
             }
         },
         BETWEEN_INTERSECT {
             @Override
-            public TestOracle create(SQLite3GlobalState globalState) throws SQLException {
+            public TestOracle<SQLite3GlobalState> create(SQLite3GlobalState globalState) throws SQLException {
                 return new SQLite3TLPBetweenIntersectOracle(globalState);
             }
         },
         GROUPBY_DISTINCT {
             @Override
-            public TestOracle create(SQLite3GlobalState globalState) throws SQLException {
+            public TestOracle<SQLite3GlobalState> create(SQLite3GlobalState globalState) throws SQLException {
                 return new SQLite3TLPGroupByDistinctOracle(globalState);
             }
         },
