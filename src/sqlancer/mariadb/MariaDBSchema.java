@@ -5,27 +5,52 @@ import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import java.util.Map;
 import java.util.stream.Stream;
 
 import sqlancer.Randomly;
 import sqlancer.SQLConnection;
 import sqlancer.common.schema.AbstractRelationalTable;
+import sqlancer.common.schema.AbstractRowValue;
 import sqlancer.common.schema.AbstractSchema;
 import sqlancer.common.schema.AbstractTableColumn;
+import sqlancer.common.schema.AbstractTables;
 import sqlancer.common.schema.TableIndex;
-import sqlancer.mariadb.MariaDBProvider.MariaDBGlobalState;
 import sqlancer.mariadb.MariaDBSchema.MariaDBTable;
 import sqlancer.mariadb.MariaDBSchema.MariaDBTable.MariaDBEngine;
+import sqlancer.mariadb.ast.MariaDBConstant;
 
 public class MariaDBSchema extends AbstractSchema<MariaDBGlobalState, MariaDBTable> {
 
     private static final int NR_SCHEMA_READ_TRIES = 10;
 
     public enum MariaDBDataType {
-        INT, VARCHAR, REAL, BOOLEAN;
+        INT, VARCHAR, FLOAT, DOUBLE, DECIMAL;
+
+        public static MariaDBDataType getRandom(MariaDBGlobalState globalState) {
+            if (globalState.usesPQS()) {
+                return Randomly.fromOptions(MariaDBDataType.INT, MariaDBDataType.VARCHAR);
+            } else {
+                return Randomly.fromOptions(values());
+            }
+        }
+
+        public boolean isNumeric() {
+            switch (this) {
+            case INT:
+            case DOUBLE:
+            case FLOAT:
+            case DECIMAL:
+                return true;
+            case VARCHAR:
+                return false;
+            default:
+                throw new AssertionError(this);
+            }
+        }
+
     }
 
     public static class MariaDBColumn extends AbstractTableColumn<MariaDBTable, MariaDBDataType> {
@@ -57,38 +82,54 @@ public class MariaDBSchema extends AbstractSchema<MariaDBGlobalState, MariaDBTab
 
     }
 
-    public static class MariaDBTables {
-        private final List<MariaDBTable> tables;
-        private final List<MariaDBColumn> columns;
+    public static class MariaDBTables extends AbstractTables<MariaDBTable, MariaDBColumn> {
 
         public MariaDBTables(List<MariaDBTable> tables) {
-            this.tables = tables;
-            columns = new ArrayList<>();
-            for (MariaDBTable t : tables) {
-                columns.addAll(t.getColumns());
+            super(tables);
+        }
+
+        public MariaDBRowValue getRandomRowValue(SQLConnection con) throws SQLException {
+            String randomRow = String.format("SELECT %s FROM %s ORDER BY RAND() LIMIT 1", columnNamesAsString(
+                    c -> c.getTable().getName() + "." + c.getName() + " AS " + c.getTable().getName() + c.getName()),
+                    // columnNamesAsString(c -> "typeof(" + c.getTable().getName() + "." +
+                    // c.getName() + ")")
+                    tableNamesAsString());
+            Map<MariaDBColumn, MariaDBConstant> values = new HashMap<>();
+            try (Statement s = con.createStatement()) {
+                ResultSet randomRowValues = s.executeQuery(randomRow);
+                if (!randomRowValues.next()) {
+                    throw new AssertionError("could not find random row! " + randomRow + "\n");
+                }
+                for (int i = 0; i < getColumns().size(); i++) {
+                    MariaDBColumn column = getColumns().get(i);
+                    Object value;
+                    int columnIndex = randomRowValues.findColumn(column.getTable().getName() + column.getName());
+                    assert columnIndex == i + 1;
+                    MariaDBConstant constant;
+                    if (randomRowValues.getString(columnIndex) == null) {
+                        constant = MariaDBConstant.createNullConstant();
+                    } else {
+                        switch (column.getType()) {
+                        case INT:
+                            value = randomRowValues.getLong(columnIndex);
+                            constant = MariaDBConstant.createIntConstant((long) value);
+                            break;
+                        case VARCHAR:
+                            value = randomRowValues.getString(columnIndex);
+                            constant = MariaDBConstant.createStringConstant((String) value);
+                            break;
+                        default:
+                            throw new AssertionError(column.getType());
+                        }
+                    }
+                    values.put(column, constant);
+                }
+                assert !randomRowValues.next();
+                return new MariaDBRowValue(this, values);
             }
+
         }
 
-        public String tableNamesAsString() {
-            return tables.stream().map(t -> t.getName()).collect(Collectors.joining(", "));
-        }
-
-        public List<MariaDBTable> getTables() {
-            return tables;
-        }
-
-        public List<MariaDBColumn> getColumns() {
-            return columns;
-        }
-
-        public String columnNamesAsString() {
-            return getColumns().stream().map(t -> t.getTable().getName() + "." + t.getName())
-                    .collect(Collectors.joining(", "));
-        }
-
-        public String columnNamesAsString(Function<MariaDBColumn, String> function) {
-            return getColumns().stream().map(function).collect(Collectors.joining(", "));
-        }
     }
 
     private static MariaDBDataType getColumnType(String typeString) {
@@ -104,21 +145,31 @@ public class MariaDBSchema extends AbstractSchema<MariaDBGlobalState, MariaDBTab
         case "mediumtext":
         case "text":
         case "longtext":
-        case "char":
             return MariaDBDataType.VARCHAR;
-        case "real":
         case "double":
-            return MariaDBDataType.REAL;
+            return MariaDBDataType.DOUBLE;
+        case "float":
+            return MariaDBDataType.FLOAT;
+        case "decimal":
+            return MariaDBDataType.DECIMAL;
         default:
             throw new AssertionError(typeString);
         }
     }
 
+    public static class MariaDBRowValue extends AbstractRowValue<MariaDBTables, MariaDBColumn, MariaDBConstant> {
+
+        MariaDBRowValue(MariaDBTables tables, Map<MariaDBColumn, MariaDBConstant> values) {
+            super(tables, values);
+        }
+
+    }
+
     public static class MariaDBTable extends AbstractRelationalTable<MariaDBColumn, MariaDBIndex, MariaDBGlobalState> {
 
         public enum MariaDBEngine {
-
-            INNO_DB("InnoDB"), MY_ISAM("MyISAM"), ARIA("Aria");
+            INNO_DB("InnoDB"), MY_ISAM("MyISAM"), MEMORY("MEMORY"), HEAP("HEAP"), CSV("CSV"), MERGE("MERGE"),
+            ARCHIVE("ARCHIVE"), FEDERATED("FEDERATED");
 
             private String s;
 
@@ -126,30 +177,25 @@ public class MariaDBSchema extends AbstractSchema<MariaDBGlobalState, MariaDBTab
                 this.s = s;
             }
 
-            public String getTextRepresentation() {
-                return s;
-            }
-
             public static MariaDBEngine get(String val) {
                 return Stream.of(values()).filter(engine -> engine.s.equalsIgnoreCase(val)).findFirst().get();
-            }
-
-            public static MariaDBEngine getRandomEngine() {
-                return Randomly.fromOptions(MariaDBEngine.values());
             }
 
         }
 
         private final MariaDBEngine engine;
 
-        public MariaDBTable(String tableName, List<MariaDBColumn> columns, List<MariaDBIndex> indexes,
-                MariaDBEngine engine) {
-            super(tableName, columns, indexes, false);
+        public MariaDBTable(String tableName, List<MariaDBColumn> columns, List<MariaDBIndex> indexes, MariaDBEngine engine) {
+            super(tableName, columns, indexes, false /* TODO: support views */);
             this.engine = engine;
         }
 
         public MariaDBEngine getEngine() {
             return engine;
+        }
+
+        public boolean hasPrimaryKey() {
+            return getColumns().stream().anyMatch(c -> c.isPrimaryKey());
         }
 
     }
@@ -158,6 +204,10 @@ public class MariaDBSchema extends AbstractSchema<MariaDBGlobalState, MariaDBTab
 
         private MariaDBIndex(String indexName) {
             super(indexName);
+        }
+
+        public static MariaDBIndex create(String indexName) {
+            return new MariaDBIndex(indexName);
         }
 
         @Override
@@ -173,7 +223,7 @@ public class MariaDBSchema extends AbstractSchema<MariaDBGlobalState, MariaDBTab
 
     public static MariaDBSchema fromConnection(SQLConnection con, String databaseName) throws SQLException {
         Exception ex = null;
-        /* the loop is a workaround for https://bugs.MariaDB.com/bug.php?id=95929 */
+        /* the loop is a workaround for https://bugs.mariadb.com/bug.php?id=95929 */
         for (int i = 0; i < NR_SCHEMA_READ_TRIES; i++) {
             try {
                 List<MariaDBTable> databaseTables = new ArrayList<>();
@@ -212,7 +262,7 @@ public class MariaDBSchema extends AbstractSchema<MariaDBGlobalState, MariaDBTab
                     databaseName, tableName))) {
                 while (rs.next()) {
                     String indexName = rs.getString("INDEX_NAME");
-                    indexes.add(new MariaDBIndex(indexName));
+                    indexes.add(MariaDBIndex.create(indexName));
                 }
             }
         }
@@ -240,6 +290,10 @@ public class MariaDBSchema extends AbstractSchema<MariaDBGlobalState, MariaDBTab
 
     public MariaDBSchema(List<MariaDBTable> databaseTables) {
         super(databaseTables);
+    }
+
+    public MariaDBTables getRandomTableNonEmptyTables() {
+        return new MariaDBTables(Randomly.nonEmptySubset(getDatabaseTables()));
     }
 
 }

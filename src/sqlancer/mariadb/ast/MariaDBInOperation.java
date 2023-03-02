@@ -2,28 +2,70 @@ package sqlancer.mariadb.ast;
 
 import java.util.List;
 
-public class MariaDBInOperation extends MariaDBExpression {
+import sqlancer.IgnoreMeException;
+
+/**
+ * @see <a href="https://dev.mariadb.com/doc/refman/8.0/en/comparison-operators.html#operator_in">Comparison Functions and
+ *      Operators</a>
+ */
+public class MariaDBInOperation implements MariaDBExpression {
 
     private final MariaDBExpression expr;
-    private final List<MariaDBExpression> list;
-    private final boolean negated;
+    private final List<MariaDBExpression> listElements;
+    private final boolean isTrue;
 
-    public MariaDBInOperation(MariaDBExpression expr, List<MariaDBExpression> list, boolean negated) {
+    public MariaDBInOperation(MariaDBExpression expr, List<MariaDBExpression> listElements, boolean isTrue) {
         this.expr = expr;
-        this.list = list;
-        this.negated = negated;
+        this.listElements = listElements;
+        this.isTrue = isTrue;
     }
 
     public MariaDBExpression getExpr() {
         return expr;
     }
 
-    public List<MariaDBExpression> getList() {
-        return list;
+    public List<MariaDBExpression> getListElements() {
+        return listElements;
     }
 
-    public boolean isNegated() {
-        return negated;
+    @Override
+    public MariaDBConstant getExpectedValue() {
+        MariaDBConstant leftVal = expr.getExpectedValue();
+        if (leftVal.isNull()) {
+            return MariaDBConstant.createNullConstant();
+        }
+        /* workaround for https://bugs.mariadb.com/bug.php?id=95957 */
+        if (leftVal.isInt() && !leftVal.isSigned()) {
+            throw new IgnoreMeException();
+        }
+
+        boolean isNull = false;
+        for (MariaDBExpression rightExpr : listElements) {
+            MariaDBConstant rightVal = rightExpr.getExpectedValue();
+
+            /* workaround for https://bugs.mariadb.com/bug.php?id=95957 */
+            if (rightVal.isInt() && !rightVal.isSigned()) {
+                throw new IgnoreMeException();
+            }
+            MariaDBConstant convertedRightVal = rightVal;
+            MariaDBConstant isEquals = leftVal.isEquals(convertedRightVal);
+            if (isEquals.isNull()) {
+                isNull = true;
+            } else {
+                if (isEquals.getInt() == 1) {
+                    return MariaDBConstant.createBoolean(isTrue);
+                }
+            }
+        }
+        if (isNull) {
+            return MariaDBConstant.createNullConstant();
+        } else {
+            return MariaDBConstant.createBoolean(!isTrue);
+        }
+
     }
 
+    public boolean isTrue() {
+        return isTrue;
+    }
 }
